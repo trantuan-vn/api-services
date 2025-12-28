@@ -9,7 +9,7 @@ importers:
   .:
     dependencies:
       zod:
-        specifier: ^3.25.76
+        specifier: ^3.25.32
         version: 3.25.76
     devDependencies:
       typescript:
