@@ -1,0 +1,26 @@
+{
+  "ConnectButton": {
+    "label": "Kết nối"
+  },
+  "LayoutControls": {
+    "title": "Cài đặt ngôn ngữ & bố cục",
+    "description": "Tùy chỉnh các tùy chọn ngôn ngữ và bố cục bảng điều khiển của bạn.",
+    "language": "Ngôn ngữ",
+    "language_placeholder": "Chọn ngôn ngữ",
+    "preset": "Chủ đề",
+    "preset_placeholder": "Chọn chủ đề",
+    "mode": "Chế độ",
+    "light": "Sáng",
+    "dark": "Tối",
+    "sidebar_variant": "Kiểu thanh bên",
+    "inset": "Chèn trong",
+    "sidebar": "Thanh bên",
+    "floating": "Nổi",
+    "sidebar_collapsible": "Thanh bên có thể thu gọn",
+    "icon": "Biểu tượng",
+    "offcanvas": "Ngoài khung",
+    "content_layout": "Bố cục nội dung",
+    "centered": "Căn giữa",
+    "full_width": "Toàn chiều rộng"
+  }  
+}

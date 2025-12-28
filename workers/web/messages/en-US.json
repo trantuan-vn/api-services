@@ -1,0 +1,26 @@
+{
+  "ConnectButton": {
+    "label": "Connect"
+  },
+  "LayoutControls": {
+    "title": "Language & Layout Settings",
+    "description": "Customize your dashboard language and layout preferences.",
+    "language": "Language",
+    "language_placeholder": "Select Language",
+    "preset": "Preset",
+    "preset_placeholder": "Select Preset",
+    "mode": "Mode",
+    "light": "Light",
+    "dark": "Dark",
+    "sidebar_variant": "Sidebar Variant",
+    "inset": "Inset",
+    "sidebar": "Sidebar",
+    "floating": "Floating",
+    "sidebar_collapsible": "Sidebar Collapsible",
+    "icon": "Icon",
+    "offcanvas": "OffCanvas",
+    "content_layout": "Content Layout",
+    "centered": "Centered",
+    "full_width": "Full Width"
+  }  
+}

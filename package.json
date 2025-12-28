@@ -1,0 +1,27 @@
+{
+  "name": "api-services",
+  "version": "1.0.0",
+  "description": "Monorepo for Cloudflare Workers with shared packages",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "workers/*"
+  ],
+  "scripts": {
+    "dev:auth": "wrangler dev workers/auth-worker",
+    "dev:queue": "wrangler dev workers/queue-worker",
+    "dev:web": "wrangler dev workers/web",
+    "deploy:auth": "wrangler deploy workers/auth-worker",
+    "deploy:queue": "wrangler deploy workers/queue-worker",
+    "deploy:web": "wrangler deploy workers/web",
+    "deploy:all": "npm run deploy:auth && npm run deploy:queue && npm run deploy:web"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250528.0",
+    "typescript": "^5.8.3",
+    "wrangler": "^4.37.1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}

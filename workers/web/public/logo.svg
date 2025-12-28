@@ -1,0 +1,25 @@
+<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <!-- Defining the gradient for the circle -->
+  <defs>
+    <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0052CC;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#F7931A;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Main circle with gradient fill -->
+  <circle cx="50" cy="50" r="45" fill="url(#grad1)" />
+
+  <!-- Stylized 'U' with clearer, bolder design -->
+  <path d="M 35 30 H 40 V 60 Q 40 65 50 65 Q 60 65 60 60 V 30 H 65 V 60 Q 65 70 50 70 Q 35 70 35 60 Z" fill="#FFFFFF" />
+
+  <!-- Blockchain network: thin lines and nodes -->
+  <path d="M 50 5 A 45 45 0 0 1 95 50 A 45 45 0 0 1 50 95 A 45 45 0 0 1 5 50 A 45 45 0 0 1 50 5" fill="none" stroke="#FFFFFF" stroke-width="1" stroke-opacity="0.4" />
+  <path d="M 50 10 A 40 40 0 0 1 90 50 A 40 40 0 0 1 50 90 A 40 40 0 0 1 10 50 A 40 40 0 0 1 50 10" fill="none" stroke="#FFFFFF" stroke-width="1" stroke-opacity="0.2" />
+
+  <!-- Small nodes to represent blockchain connections -->
+  <circle cx="50" cy="5" r="2" fill="#FFFFFF" fill-opacity="0.7" />
+  <circle cx="95" cy="50" r="2" fill="#FFFFFF" fill-opacity="0.7" />
+  <circle cx="50" cy="95" r="2" fill="#FFFFFF" fill-opacity="0.7" />
+  <circle cx="5" cy="50" r="2" fill="#FFFFFF" fill-opacity="0.7" />
+</svg>

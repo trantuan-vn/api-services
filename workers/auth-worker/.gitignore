@@ -1,0 +1,12 @@
+.wrangler
+node_modules
+.env
+dist
+.DS_Store
+.alchemy.dev.vars
+.dev.vars
+
+.dev.vars*
+!.dev.vars.example
+.env*
+!.env.example

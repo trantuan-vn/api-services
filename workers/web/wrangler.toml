@@ -1,0 +1,17 @@
+main = ".open-next/worker.js"
+name = "beta-trading-sto"
+compatibility_date = "2025-03-25"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+NEXT_PUBLIC_DEBUG = "true"
+
+[limits]
+cpu_ms = 300000
+
+[assets]
+directory = ".open-next/assets"
+binding = "ASSETS"
+[[routes]]
+pattern = "beta.unitoken.trade"
+custom_domain = true

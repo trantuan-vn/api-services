@@ -1,0 +1,80 @@
+/**
+ * For more details on how to configure Wrangler, refer to:
+ * https://developers.cloudflare.com/workers/wrangler/configuration/
+ */
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "queue-worker",
+	"main": "src/index.ts",
+	"compatibility_date": "2025-12-05",
+	"workers_dev": false,                // Tắt hoàn toàn subdomain *.workers.dev
+  "preview_urls": false,               // Tắt preview URL (không ai có thể truy cập qua preview)
+	"observability": {
+		"enabled": true
+	},
+// ========== ENVIRONMENT VARIABLES ==========
+  "define": {
+    "ENVIRONMENT": "production",
+    "BATCH_SIZE": "100",
+    "MAX_RETRIES": "3",
+    "AE_BATCH_SIZE": "1000",
+    "QUEUE_PROCESSING_TIMEOUT": "30000"
+  },
+
+  // ========== QUEUE CONFIGURATION ==========
+  "queues": {
+    "producers": [
+      {
+        "binding": "INPUT_QUEUE",
+        "queue": "input-part-0"
+      },
+      {
+        "binding": "ERROR_QUEUE",
+        "queue": "error-queue-dlq"
+      }
+    ],
+    "consumers": [
+      {
+        "queue": "input-part-0",
+        "max_batch_size": 100,
+        "max_batch_timeout": 10,
+        "max_retries": 3,
+        "dead_letter_queue": "error-queue-dlq",
+        "retry_delay": 5
+      },
+      {
+        "queue": "error-queue-dlq",
+        "max_batch_size": 50,
+        "max_batch_timeout": 30,
+        "max_retries": 1,
+        "retry_delay": 10
+      }
+    ]
+  },
+
+  // ========== DURABLE OBJECTS BINDING ==========
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "USER_DO",
+				"class_name": "UserDO",
+        "script_name": "auth-worker"
+      }
+    ]
+  },
+
+  // ========== ANALYTICS ENGINE ==========
+  "analytics_engine_datasets": [
+    {
+      "binding": "AE_DATASET",
+      "dataset": "queue_analytics"
+    }
+  ],
+	"d1_databases": [
+    {
+      "binding": "D1DB",
+      "database_name": "unitoken_db",
+      "database_id": "02704177-c811-4132-92e4-622f955a7ae8"
+    }
+  ]
+}

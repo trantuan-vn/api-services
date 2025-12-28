@@ -1,0 +1,95 @@
+{
+  "name": "userdo",
+  "version": "0.1.63",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/acoyfellow/userdo.git"
+  },
+  "main": "dist/src/index.js",
+  "dependencies": {
+    "@tsndr/cloudflare-worker-jwt": "^3.1.7",
+    "crypto-js": "^4.2.0",
+    "drizzle-orm": "^0.44.2",
+    "hono": "^4.7.10",
+    "qs": "^6.14.0",
+    "reconnecting-websocket": "^4.4.0",
+    "siwe": "^3.0.0",
+    "viem": "^2.37.5",
+    "zod": "^3.25.32"
+  },
+  "devDependencies": {
+    "@types/crypto-js": "^4.2.2",
+    "@types/node": "^24.5.0",
+    "typescript": "5.8.3",
+    "wrangler": "4.37.1"
+  },
+  "exports": {
+    ".": {
+      "browser": "./dist/src/client.js",
+      "import": "./dist/src/index.js",
+      "require": "./dist/src/index.js"
+    },
+    "./client": {
+      "import": "./dist/src/client.js",
+      "require": "./dist/src/client.js"
+    },
+    "./server": {
+      "import": "./dist/src/server.js",
+      "require": "./dist/src/server.js"
+    },
+    "./worker": {
+      "import": "./dist/src/worker.js",
+      "require": "./dist/src/worker.js"
+    },
+    "./jwt": {
+      "import": "./dist/src/jwt-utils.js",
+      "require": "./dist/src/jwt-utils.js"
+    }
+  },
+  "bugs": {
+    "url": "https://github.com/acoyfellow/userdo/issues"
+  },
+  "cloudflare": {
+    "label": "UserDO",
+    "products": [
+      "Workers",
+      "Durable Objects",
+      "Auth"
+    ],
+    "categories": [
+      "storage",
+      "auth"
+    ]
+  },
+  "files": [
+    "dist"
+  ],
+  "homepage": "https://github.com/acoyfellow/userdo#readme",
+  "keywords": [
+    "user",
+    "auth",
+    "durable",
+    "object",
+    "cloudflare",
+    "durableobjects",
+    "durableobject",
+    "durable-object",
+    "durable-objects"
+  ],
+  "scripts": {
+    "cf-typegen": "wrangler types",
+    "check": "tsc && wrangler deploy --dry-run",
+    "deploy": "wrangler deploy",
+    "dev": "npm run build && wrangler dev",
+    "start": "wrangler dev",
+    "build": "tsc && bun build src/client.ts --outfile=dist/src/client.bundle.js --format=esm --minify",
+    "prepublishOnly": "npm run build",
+    "release:patch": "npm version patch && npm publish",
+    "release:minor": "npm version minor && npm publish",
+    "release:major": "npm version major && npm publish",
+    "patch": "bun run cf-typegen && bun run check && bun run release:patch"
+  },
+  "types": "dist/src/index.d.ts",
+  "license": "MIT"
+}

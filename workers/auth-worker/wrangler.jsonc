@@ -1,0 +1,188 @@
+/**
+ * For more details on how to configure Wrangler, refer to:
+ * https://developers.cloudflare.com/workers/wrangler/configuration/
+ */
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "auth-worker",
+	"main": "src/index.ts",
+	"compatibility_date": "2025-04-01",
+	"compatibility_flags": [
+		"nodejs_compat"
+	],
+	"migrations": [
+		{
+			"tag": "v1",
+			"new_sqlite_classes": [
+				"BroadcastServiceDO",
+				"UserShardDO",
+				"UserDO"
+			]
+		}
+	],
+	"durable_objects": {
+		"bindings": [
+			{
+				"name": "BROADCAST_SERVICE_DO",
+				"script_name": "auth-worker",
+				"class_name": "BroadcastServiceDO"
+			},
+			{
+				"name": "USER_SHARD_DO", 
+				"script_name": "auth-worker",
+				"class_name": "UserShardDO"
+			},
+			{
+				"name": "USER_DO",
+				"script_name": "auth-worker", 
+				"class_name": "UserDO"
+			}
+		]
+	},
+	"observability": {
+		"enabled": true
+	},
+	// "placement": { "mode": "smart" }
+	"vars": {
+		"ACCOUNT_ID": "e76b7bb989f93985402e1a61e6cd5ff3",  
+		"SMS_FROM_NUMBER": "+84919358683",		
+		"SIWE_DOMAIN": "beta.unitoken.trade",
+		"FRONTEND_URL": "https://beta.unitoken.trade",
+		"BASE_URL": "https://api.unitoken.trade",
+		"DEBUG": "false",
+		"ENVIRONMENT": "production",
+		"QUEUE_BATCH_SIZE": "100",
+		"QUEUE_FLUSH_THRESHOLD": "200",
+		"QUEUE_FLUSH_INTERVAL": "5000",
+		"MAX_SEND_FAILURE_COUNT": "3",
+		"RETRY_ALARM_INTERVAL": "60000"
+	},
+	// ========== QUEUE CONFIGURATION ==========
+	"queues": {
+		"producers": [
+		{
+			"binding": "INPUT_QUEUE",
+			"queue": "input-part-0"
+		},
+		{
+			"binding": "ERROR_QUEUE",
+			"queue": "error-queue-dlq"
+		}
+		]
+	},
+
+	"r2_buckets": [
+		{
+		"binding": "R2_VERSION_BUCKET",
+		"bucket_name": "version-backup-bucket"
+		}
+	],	
+	"kv_namespaces": [
+		{
+			"binding": "NONCE_KV",
+			"id": "fbaaa47d74ba4fd4b2342d9abae94491"
+		}
+	],
+	"ai": {
+		"binding": "AI"  
+	},
+	"routes": [
+		{
+		"pattern": "api.unitoken.trade",
+		"custom_domain": true
+		}
+	],	
+  	"secrets_store_secrets": [
+		{
+		"binding": "JWT_SECRET",
+		"store_id": "8fe9cf5e23574e849953a38dcdafdf8c",
+		"secret_name": "JWT_SECRET"
+		},
+		{
+		"binding": "EMAIL_API_KEY",
+		"store_id": "8fe9cf5e23574e849953a38dcdafdf8c",
+		"secret_name": "EMAIL_API_KEY"
+		},
+		{
+		"binding": "TWILIO_ACCOUNT_SID",
+		"store_id": "8fe9cf5e23574e849953a38dcdafdf8c",
+		"secret_name": "TWILIO_ACCOUNT_SID"
+		},	
+		{
+		"binding": "TWILIO_AUTH_TOKEN",
+		"store_id": "8fe9cf5e23574e849953a38dcdafdf8c",
+		"secret_name": "TWILIO_AUTH_TOKEN"
+		},	
+		{
+		"binding": "VONAGE_API_SECRET",
+		"store_id": "8fe9cf5e23574e849953a38dcdafdf8c",
+		"secret_name": "VONAGE_API_SECRET"
+		},	
+		{
+		"binding": "VONAGE_API_KEY",
+		"store_id": "8fe9cf5e23574e849953a38dcdafdf8c",
+		"secret_name": "VONAGE_API_KEY"
+		},	
+		{
+		"binding": "ENCRYPTION_SECRET",
+		"store_id": "8fe9cf5e23574e849953a38dcdafdf8c",
+		"secret_name": "ENCRYPTION_SECRET"
+		},	
+		{
+		"binding": "GOOGLE_CLIENT_ID",
+		"store_id": "8fe9cf5e23574e849953a38dcdafdf8c",
+		"secret_name": "GOOGLE_CLIENT_ID"
+		},	
+		{
+		"binding": "GOOGLE_CLIENT_SECRET",
+		"store_id": "8fe9cf5e23574e849953a38dcdafdf8c",
+		"secret_name": "GOOGLE_CLIENT_SECRET"
+		},	
+		{
+		"binding": "APPLE_CLIENT_ID",
+		"store_id": "8fe9cf5e23574e849953a38dcdafdf8c",
+		"secret_name": "APPLE_CLIENT_ID"
+		},
+		{
+		"binding": "APPLE_CLIENT_SECRET",
+		"store_id": "8fe9cf5e23574e849953a38dcdafdf8c",
+		"secret_name": "APPLE_CLIENT_SECRET"
+		},
+		{
+		"binding": "FACEBOOK_CLIENT_ID",
+		"store_id": "8fe9cf5e23574e849953a38dcdafdf8c",
+		"secret_name": "FACEBOOK_CLIENT_ID"
+		},
+		{
+		"binding": "FACEBOOK_CLIENT_SECRET",
+		"store_id": "8fe9cf5e23574e849953a38dcdafdf8c",
+		"secret_name": "FACEBOOK_CLIENT_SECRET"
+		},
+		{
+		"binding": "GITHUB_CLIENT_ID",
+		"store_id": "8fe9cf5e23574e849953a38dcdafdf8c",
+		"secret_name": "GITHUB_CLIENT_ID"
+		},	
+		{
+		"binding": "GITHUB_CLIENT_SECRET",
+		"store_id": "8fe9cf5e23574e849953a38dcdafdf8c",
+		"secret_name": "GITHUB_CLIENT_SECRET"
+		},
+		{
+		"binding": "TWITTER_CLIENT_ID",
+		"store_id": "8fe9cf5e23574e849953a38dcdafdf8c",
+		"secret_name": "TWITTER_CLIENT_ID"
+		},
+		{
+		"binding": "TWITTER_CLIENT_SECRET",
+		"store_id": "8fe9cf5e23574e849953a38dcdafdf8c",
+		"secret_name": "TWITTER_CLIENT_SECRET"
+		}  
+	],
+  	"services": [
+		{
+			"binding": "QUEUE_WORKER",        // Tên bạn sẽ dùng trong code: env.QUEUE_WORKER
+			"service": "queue-worker",        // Tên chính xác của Worker kia (phải khớp 100%)
+		}
+	]
+}
