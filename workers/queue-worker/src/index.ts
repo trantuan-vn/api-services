@@ -1,5 +1,15 @@
 import { D1DatabaseManager } from "./database";
 
+// Cache database manager instance to avoid recreating it on every queue processing
+let databaseManager: D1DatabaseManager | null = null;
+
+const getDatabaseManager = (db: D1Database): D1DatabaseManager => {
+  if (!databaseManager) {
+    databaseManager = new D1DatabaseManager(db);
+  }
+  return databaseManager;
+};
+
 interface ProcessedItem {
   data: any;
   message: Message;
@@ -114,9 +124,8 @@ const processChunk = async (
     // After successful insert, cleanup records from UserDO
     if (maxId > 0) {
       try {
-        // First mark as processed, then delete
-        await cleanupProcessedRecords(userId, table, env, 'mark', maxId);
-        await cleanupProcessedRecords(userId, table, env, 'delete', maxId);
+        // First mark as processed
+        await cleanupProcessedRecords(userId, table, env, 'mark', maxId);        
         console.log(`[QueueWorker] Cleaned up records up to id ${maxId} from ${userId}/${table}`);
       } catch (error) {
         console.error(`[QueueWorker] Cleanup failed for ${userId}/${table}:`, error);
@@ -192,7 +201,7 @@ const parseMessage = (message: Message): {
 
 const processInputQueue = async (batch: MessageBatch, env: Env): Promise<void> => {
   const BATCH_SIZE = parseInt(env.BATCH_SIZE || '100');
-  const database = new D1DatabaseManager(env.D1DB);
+  const database = getDatabaseManager(env.D1DB);
   const userTableGroups = new Map<string, Map<string, ProcessedItem[]>>();
 
   // Group messages by userId and table

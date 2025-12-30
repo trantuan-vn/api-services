@@ -188,30 +188,6 @@ const isZodArray = (schema: any): boolean => {
   return getSchemaTypeName(schema) === 'ZodArray';
 };
 
-const isZodRecord = (schema: any): boolean => {
-  return getSchemaTypeName(schema) === 'ZodRecord';
-};
-
-const isZodMap = (schema: any): boolean => {
-  return getSchemaTypeName(schema) === 'ZodMap';
-};
-
-const isZodTuple = (schema: any): boolean => {
-  return getSchemaTypeName(schema) === 'ZodTuple';
-};
-
-const isZodLazy = (schema: any): boolean => {
-  return getSchemaTypeName(schema) === 'ZodLazy';
-};
-
-const isZodUnion = (schema: any): boolean => {
-  return getSchemaTypeName(schema) === 'ZodUnion';
-};
-
-const isZodIntersection = (schema: any): boolean => {
-  return getSchemaTypeName(schema) === 'ZodIntersection';
-};
-
 export class SchemaTypeChecker {
   static isNumberSchema = SchemaTypeChecker.createChecker('ZodNumber');
   static isDateSchema = SchemaTypeChecker.createChecker('ZodDate');
