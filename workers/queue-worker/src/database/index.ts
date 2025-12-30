@@ -159,39 +159,92 @@ export class DynamicSchemaManager {
   }
 }
 
-export class SchemaTypeChecker {
-  static isNumberSchema = SchemaTypeChecker.createChecker(z.ZodNumber);
-  static isDateSchema = SchemaTypeChecker.createChecker(z.ZodDate);
-  static isBooleanSchema = SchemaTypeChecker.createChecker(z.ZodBoolean);
-  static isStringSchema = SchemaTypeChecker.createChecker(z.ZodString);
-  static isArraySchema = SchemaTypeChecker.createChecker(z.ZodArray);
-  static isObjectSchema = SchemaTypeChecker.createChecker(z.ZodObject);
-  static isRecordSchema = SchemaTypeChecker.createChecker(z.ZodRecord);
-  static isEnumSchema = SchemaTypeChecker.createChecker(z.ZodEnum);
-  static isNativeEnumSchema = SchemaTypeChecker.createChecker((z as any).ZodNativeEnum);
-  static isUnionSchema = SchemaTypeChecker.createChecker(z.ZodUnion);
-  static isIntersectionSchema = SchemaTypeChecker.createChecker(z.ZodIntersection);
-  static isMapSchema = SchemaTypeChecker.createChecker(z.ZodMap);
+// Utility function to check schema type without instanceof issues
+const getSchemaTypeName = (schema: any): string => {
+  return schema?.constructor?.name || 'Unknown';
+};
 
-  private static createChecker<T extends z.ZodTypeAny>(targetType: abstract new (...args: any[]) => T) {
+const isZodObject = (schema: any): boolean => {
+  return getSchemaTypeName(schema) === 'ZodObject';
+};
+
+const isZodEffects = (schema: any): boolean => {
+  return getSchemaTypeName(schema) === 'ZodEffects';
+};
+
+const isZodOptional = (schema: any): boolean => {
+  return getSchemaTypeName(schema) === 'ZodOptional';
+};
+
+const isZodDefault = (schema: any): boolean => {
+  return getSchemaTypeName(schema) === 'ZodDefault';
+};
+
+const isZodNullable = (schema: any): boolean => {
+  return getSchemaTypeName(schema) === 'ZodNullable';
+};
+
+const isZodArray = (schema: any): boolean => {
+  return getSchemaTypeName(schema) === 'ZodArray';
+};
+
+const isZodRecord = (schema: any): boolean => {
+  return getSchemaTypeName(schema) === 'ZodRecord';
+};
+
+const isZodMap = (schema: any): boolean => {
+  return getSchemaTypeName(schema) === 'ZodMap';
+};
+
+const isZodTuple = (schema: any): boolean => {
+  return getSchemaTypeName(schema) === 'ZodTuple';
+};
+
+const isZodLazy = (schema: any): boolean => {
+  return getSchemaTypeName(schema) === 'ZodLazy';
+};
+
+const isZodUnion = (schema: any): boolean => {
+  return getSchemaTypeName(schema) === 'ZodUnion';
+};
+
+const isZodIntersection = (schema: any): boolean => {
+  return getSchemaTypeName(schema) === 'ZodIntersection';
+};
+
+export class SchemaTypeChecker {
+  static isNumberSchema = SchemaTypeChecker.createChecker('ZodNumber');
+  static isDateSchema = SchemaTypeChecker.createChecker('ZodDate');
+  static isBooleanSchema = SchemaTypeChecker.createChecker('ZodBoolean');
+  static isStringSchema = SchemaTypeChecker.createChecker('ZodString');
+  static isArraySchema = SchemaTypeChecker.createChecker('ZodArray');
+  static isObjectSchema = SchemaTypeChecker.createChecker('ZodObject');
+  static isRecordSchema = SchemaTypeChecker.createChecker('ZodRecord');
+  static isEnumSchema = SchemaTypeChecker.createChecker('ZodEnum');
+  static isNativeEnumSchema = SchemaTypeChecker.createChecker('ZodNativeEnum');
+  static isUnionSchema = SchemaTypeChecker.createChecker('ZodUnion');
+  static isIntersectionSchema = SchemaTypeChecker.createChecker('ZodIntersection');
+  static isMapSchema = SchemaTypeChecker.createChecker('ZodMap');
+
+  private static createChecker(typeName: string) {
     return (schema: z.ZodTypeAny): boolean => {
-      if (schema instanceof targetType) return true;
+      if (getSchemaTypeName(schema) === typeName) return true;
 
       const innerSchema = this.getInnerSchema(schema);
-      return innerSchema ? this.createChecker(targetType)(innerSchema) : false;
+      return innerSchema ? this.createChecker(typeName)(innerSchema) : false;
     };
   }
 
   private static getInnerSchema(schema: z.ZodTypeAny): z.ZodTypeAny | undefined {
-    if (schema instanceof z.ZodOptional ||
-        schema instanceof z.ZodNullable ||
-        schema instanceof z.ZodDefault) {
+    if (isZodOptional(schema) ||
+        isZodNullable(schema) ||
+        isZodDefault(schema)) {
       return (schema as any)._def.innerType;
     }
-    else if (schema instanceof (z as any).ZodEffects) {
-      return (schema as any)._def.schema;
+    else if (isZodEffects(schema)) {
+      return (schema as any)._def.schema || (schema as any)._def.innerType;
     }
-    else if (schema instanceof (z as any).ZodPipeline) {
+    else if (getSchemaTypeName(schema) === 'ZodPipeline') {
       return (schema as any)._def.in;
     }
     return undefined;
@@ -245,7 +298,7 @@ export class DynamicDataBuilder {
 
   static transformData(data: any, schema: z.ZodSchema): any {
     const transformed = { ...data };
-    const schemaShape = schema instanceof z.ZodObject ? schema.shape : {};
+    const schemaShape = isZodObject(schema) ? (schema as any).shape : {};
 
     Object.keys(transformed).forEach(key => {
       const value = transformed[key];
@@ -293,7 +346,7 @@ export class DynamicDataBuilder {
       }
     });
 
-    const schemaShape = schema instanceof z.ZodObject ? schema.shape : {};
+    const schemaShape = isZodObject(schema) ? (schema as any).shape : {};
 
     Object.keys(parsed).forEach(key => {
       const value = parsed[key];
@@ -367,7 +420,7 @@ export class DynamicDataBuilder {
     if (typeof data !== 'object') return data;
 
     const preprocessed = { ...data };
-    const schemaShape = schema instanceof z.ZodObject ? schema.shape : {};
+    const schemaShape = isZodObject(schema) ? (schema as any).shape : {};
 
     Object.keys(preprocessed).forEach(key => {
       const value = preprocessed[key];
@@ -452,11 +505,11 @@ export class DynamicDataBuilder {
   private static unwrapOptionalSchema(schema: z.ZodTypeAny | undefined): z.ZodTypeAny | undefined {
     if (!schema) return undefined;
 
-    if (schema instanceof z.ZodOptional || schema instanceof z.ZodNullable) {
+    if (isZodOptional(schema) || isZodNullable(schema)) {
       return (schema as any)._def.innerType;
     }
 
-    if (schema instanceof z.ZodDefault) {
+    if (isZodDefault(schema)) {
       return (schema as any)._def.innerType;
     }
 
@@ -464,12 +517,12 @@ export class DynamicDataBuilder {
   }
 
   private static getArrayElementSchema(schema: z.ZodTypeAny): z.ZodTypeAny | undefined {
-    if (schema instanceof z.ZodArray) {
+    if (isZodArray(schema)) {
       return (schema as any)._def.type;
     }
 
     const unwrapped = this.unwrapOptionalSchema(schema);
-    if (unwrapped instanceof z.ZodArray) {
+    if (isZodArray(unwrapped)) {
       return (unwrapped as any)._def.type;
     }
 
@@ -510,7 +563,7 @@ export class D1DatabaseManager {
 
 
   constructor(
-    private db: D1Database, // Thay storage.sql bằng D1Database
+    private db: D1Database,
   ) {
     this.initializeTables();
   }
@@ -538,14 +591,8 @@ export class D1DatabaseManager {
 			{ name: 'refunds', schema: RefundSchema }
 		];
 
-		queueSchemas.forEach(({ name, schema }) => {
-			const extendedSchema = schema.extend({
-				queueId: z.number().int().optional(),
-				queueStatus: z.enum(['pending', 'flushed', 'processed']).optional(),
-				flushedAt: z.number().optional(),
-				processedAt: z.number().optional()
-			});
-			this.registerTable(name, extendedSchema, this.TABLE_CONFIGS.queueTable());
+		queueSchemas.forEach(({ name, schema }) => {			
+			this.registerTable(name, schema, this.TABLE_CONFIGS.queueTable());
 		});
 
 		// Other tables
@@ -563,34 +610,39 @@ export class D1DatabaseManager {
     baseSchema: z.ZodSchema,
     options: TableOptions
   ): z.ZodSchema {
-    let extendedSchema = baseSchema;
+    const baseShape = this.extractSchemaShape(baseSchema);
+    const extensions: any = {};
 
     if (options.autoFields) {
-      const extensions: any = {};
-
-      if (options.autoFields.id) {
+      if (options.autoFields.id !== false) {
         // D1 sẽ tự động tăng GlobalID nếu column là INTEGER PRIMARY KEY
         extensions.globalId = z.number().optional();
         extensions.id = z.number().optional();
       }
 
-      if (options.autoFields.timestamps) {
+      if (options.autoFields.timestamps !== false) {
         extensions.created_at = z.number().optional();
         extensions.updated_at = z.number().optional();
       }
 
-      if (options.autoFields.user) {
+      if (options.autoFields.user !== false) {
         extensions.user_id = z.string().optional();
       }
 
-      if (options.autoFields.organization) {
+      if (options.autoFields.organization !== false) {
         extensions.organization_id = z.string().optional();
       }
-
-      extendedSchema = (baseSchema as any).extend(extensions);
+      
+      if (options.autoFields.queue !== false) {
+        extensions.queueId = z.number().int().optional();
+        extensions.queueStatus = z.enum(['pending', 'flushed', 'processed']).optional();
+        extensions.flushedAt = z.number().optional();
+        extensions.processedAt = z.number().optional();
+      }
     }
 
-    return extendedSchema;
+    const extendedShape = { ...baseShape, ...extensions };
+    return z.object(extendedShape);
   }
 
 
@@ -1013,9 +1065,10 @@ export class D1DatabaseManager {
     )`;
 
     try {
-      await this.db.exec(createSQL);
+      // Use prepare().run() for single DDL statements in D1
+      await this.db.prepare(createSQL).run();
     } catch (err) {
-      console.error(`Error creating table ${name}:`, err);
+      console.error(`Error creating table ${name} with sql: ${createSQL}`, err);
       throw err;
     }
 
@@ -1023,60 +1076,79 @@ export class D1DatabaseManager {
   }
 
   private extractSchemaShape(schema: z.ZodSchema): Record<string, z.ZodTypeAny> {
-    if (schema instanceof z.ZodObject) {
-      return schema.shape;
+    const typeName = getSchemaTypeName(schema);
+    
+    // Base case: ZodObject
+    if (typeName === 'ZodObject') {
+      return (schema as any).shape;
     }
-
-    if (schema instanceof (z as any).ZodEffects) {
-      return this.extractSchemaShape((schema as any)._def.schema);
+    
+    // ZodEffects từ .refine(), .transform(), preprocess, etc.
+    if (typeName === 'ZodEffects') {
+      const def = (schema as any)._def;
+      const innerSchema = def.schema || def.innerType;
+      if (innerSchema) {
+        return this.extractSchemaShape(innerSchema);
+      }
+      return {};
     }
-
-    if (schema instanceof z.ZodOptional ||
-        schema instanceof z.ZodDefault ||
-        schema instanceof z.ZodNullable) {
+    
+    // ZodOptional, ZodDefault, ZodNullable
+    if (typeName === 'ZodOptional' || 
+        typeName === 'ZodDefault' || 
+        typeName === 'ZodNullable') {
       return this.extractSchemaShape((schema as any)._def.innerType);
     }
-
-    if (schema instanceof z.ZodArray) {
+    
+    // ZodArray
+    if (typeName === 'ZodArray') {
+      // Mảng được lưu dưới dạng JSON string
       return {};
     }
-
-    if (schema instanceof z.ZodRecord) {
+    
+    // ZodRecord - được lưu dưới dạng JSON string
+    if (typeName === 'ZodRecord') {
       return {};
     }
-
-    if (schema instanceof z.ZodMap) {
+    
+    // ZodMap - được lưu dưới dạng JSON string
+    if (typeName === 'ZodMap') {
       return {};
     }
-
-    if (schema instanceof z.ZodTuple) {
+    
+    // ZodTuple - được lưu dưới dạng JSON string
+    if (typeName === 'ZodTuple') {
       return {};
     }
-
-    if (schema instanceof z.ZodLazy) {
+    
+    // ZodLazy
+    if (typeName === 'ZodLazy') {
       try {
         return this.extractSchemaShape((schema as any)._def.getter());
       } catch {
         return {};
       }
     }
-
-    if (schema instanceof z.ZodUnion) {
-      const options = schema._def.options as z.ZodTypeAny[];
+    
+    // ZodUnion - try to extract shape from all options
+    if (typeName === 'ZodUnion') {
+      const options = (schema as any)._def.options as z.ZodTypeAny[];
       const allShapes = options.map(opt => this.extractSchemaShape(opt));
+      // Merge all shapes
       const merged: Record<string, z.ZodTypeAny> = {};
       allShapes.forEach(shape => {
         Object.assign(merged, shape);
       });
       return merged;
     }
-
-    if (schema instanceof z.ZodIntersection) {
+    
+    // ZodIntersection
+    if (typeName === 'ZodIntersection') {
       const leftShape = this.extractSchemaShape((schema as any)._def.left);
       const rightShape = this.extractSchemaShape((schema as any)._def.right);
       return { ...leftShape, ...rightShape };
     }
-
+    
     return {};
   }
 
@@ -1110,6 +1182,13 @@ export class D1DatabaseManager {
         columns.push('"organization_id" TEXT');
       }
     }
+    
+    if (options.autoFields?.queue !== false) {
+      columns.push('"queueId" INTEGER');
+      columns.push('"queueStatus" TEXT');
+      columns.push('"flushedAt" INTEGER');
+      columns.push('"processedAt" INTEGER');
+    }
 
     // Add columns from schema
     for (const [key, value] of Object.entries(schemaShape)) {
@@ -1127,23 +1206,24 @@ export class D1DatabaseManager {
 
   private getColumnType(zodType: z.ZodTypeAny): string {
     const unwrappedType = this.unwrapZodType(zodType);
+    const typeName = getSchemaTypeName(unwrappedType);
 
     // Map to SQLite types (D1 uses SQLite)
-    if (unwrappedType instanceof z.ZodString) {
+    if (typeName === 'ZodString') {
       return 'TEXT';
-    } else if (unwrappedType instanceof z.ZodNumber) {
-      return this.isIntegerType(unwrappedType) ? 'INTEGER' : 'REAL';
-    } else if (unwrappedType instanceof z.ZodBoolean) {
+    } else if (typeName === 'ZodNumber') {
+      return this.isIntegerType(unwrappedType as z.ZodNumber) ? 'INTEGER' : 'REAL';
+    } else if (typeName === 'ZodBoolean') {
       return 'INTEGER';
-    } else if (unwrappedType instanceof z.ZodDate) {
+    } else if (typeName === 'ZodDate') {
       return 'INTEGER';
-    } else if (unwrappedType instanceof z.ZodBigInt) {
+    } else if (typeName === 'ZodBigInt') {
       return 'TEXT';
-    } else if (unwrappedType instanceof z.ZodEnum) {
+    } else if (typeName === 'ZodEnum') {
       return 'TEXT';
-    } else if (unwrappedType instanceof (z as any).ZodNativeEnum) {
+    } else if (typeName === 'ZodNativeEnum') {
       return 'TEXT';
-    } else if (unwrappedType instanceof z.ZodLiteral) {
+    } else if (typeName === 'ZodLiteral') {
       const value = (unwrappedType as any)._def.value;
       if (typeof value === 'boolean') {
         return 'INTEGER';
@@ -1152,11 +1232,11 @@ export class D1DatabaseManager {
       } else {
         return 'TEXT';
       }
-    } else if (unwrappedType instanceof z.ZodRecord ||
-               unwrappedType instanceof z.ZodMap ||
-               unwrappedType instanceof z.ZodArray ||
-               unwrappedType instanceof z.ZodTuple ||
-               unwrappedType instanceof z.ZodObject) {
+    } else if (typeName === 'ZodRecord' ||
+               typeName === 'ZodMap' ||
+               typeName === 'ZodArray' ||
+               typeName === 'ZodTuple' ||
+               typeName === 'ZodObject') {
       return 'TEXT';
     } else {
       return 'TEXT';
@@ -1164,9 +1244,10 @@ export class D1DatabaseManager {
   }
 
   private unwrapZodType(zodType: z.ZodTypeAny): z.ZodTypeAny {
+    const typeName = getSchemaTypeName(zodType);
     const def = (zodType as any)._def;
 
-    if (zodType instanceof (z as any).ZodEffects) {
+    if (typeName === 'ZodEffects') {
       if (def.schema) {
         return this.unwrapZodType(def.schema);
       }
@@ -1175,13 +1256,13 @@ export class D1DatabaseManager {
       }
     }
 
-    if (zodType instanceof z.ZodOptional ||
-        zodType instanceof z.ZodNullable ||
-        zodType instanceof z.ZodDefault ||
-        zodType instanceof (z as any).ZodBranded ||
-        zodType instanceof z.ZodReadonly ||
-        zodType instanceof z.ZodCatch ||
-        zodType instanceof z.ZodPromise) {
+    if (typeName === 'ZodOptional' ||
+        typeName === 'ZodNullable' ||
+        typeName === 'ZodDefault' ||
+        typeName === 'ZodBranded' ||
+        typeName === 'ZodReadonly' ||
+        typeName === 'ZodCatch' ||
+        typeName === 'ZodPromise') {
 
       if (def.innerType) {
         return this.unwrapZodType(def.innerType);
@@ -1194,7 +1275,7 @@ export class D1DatabaseManager {
       }
     }
 
-    if (zodType instanceof z.ZodLazy && def.getter) {
+    if (typeName === 'ZodLazy' && def.getter) {
       try {
         return this.unwrapZodType(def.getter());
       } catch {
@@ -1202,62 +1283,62 @@ export class D1DatabaseManager {
       }
     }
 
-    if ((zodType as any).constructor.name === 'ZodPipeline' && def.in) {
+    if (typeName === 'ZodPipeline' && def.in) {
       return this.unwrapZodType(def.in);
     }
 
-    if (zodType instanceof z.ZodUnion) {
+    if (typeName === 'ZodUnion') {
       const options = def.options as z.ZodTypeAny[];
       const unwrappedTypes = options.map(opt => this.unwrapZodType(opt));
 
-      const booleanType = unwrappedTypes.find(t => t instanceof z.ZodBoolean);
+      const booleanType = unwrappedTypes.find(t => getSchemaTypeName(t) === 'ZodBoolean');
       if (booleanType) return booleanType;
 
-      const numberType = unwrappedTypes.find(t => t instanceof z.ZodNumber);
+      const numberType = unwrappedTypes.find(t => getSchemaTypeName(t) === 'ZodNumber');
       if (numberType) return numberType;
 
-      const stringType = unwrappedTypes.find(t => t instanceof z.ZodString);
+      const stringType = unwrappedTypes.find(t => getSchemaTypeName(t) === 'ZodString');
       if (stringType) return stringType;
 
-      const recordType = unwrappedTypes.find(t => t instanceof z.ZodRecord);
+      const recordType = unwrappedTypes.find(t => getSchemaTypeName(t) === 'ZodRecord');
       if (recordType) return recordType;
 
-      const arrayType = unwrappedTypes.find(t => t instanceof z.ZodArray);
+      const arrayType = unwrappedTypes.find(t => getSchemaTypeName(t) === 'ZodArray');
       if (arrayType) return arrayType;
 
-      const objectType = unwrappedTypes.find(t => t instanceof z.ZodObject);
+      const objectType = unwrappedTypes.find(t => getSchemaTypeName(t) === 'ZodObject');
       if (objectType) return objectType;
 
       return unwrappedTypes[0] || z.string();
     }
 
-    if (zodType instanceof z.ZodIntersection) {
+    if (typeName === 'ZodIntersection') {
       const left = this.unwrapZodType(def.left);
       const right = this.unwrapZodType(def.right);
 
-      if (left instanceof z.ZodBoolean || right instanceof z.ZodBoolean) {
+      if (getSchemaTypeName(left) === 'ZodBoolean' || getSchemaTypeName(right) === 'ZodBoolean') {
         return z.boolean();
       }
-      if (left instanceof z.ZodNumber || right instanceof z.ZodNumber) {
+      if (getSchemaTypeName(left) === 'ZodNumber' || getSchemaTypeName(right) === 'ZodNumber') {
         return z.number();
       }
-      if (left instanceof z.ZodString || right instanceof z.ZodString) {
+      if (getSchemaTypeName(left) === 'ZodString' || getSchemaTypeName(right) === 'ZodString') {
         return z.string();
       }
-      if (left instanceof z.ZodRecord || right instanceof z.ZodRecord) {
+      if (getSchemaTypeName(left) === 'ZodRecord' || getSchemaTypeName(right) === 'ZodRecord') {
         return z.record(z.string(), z.any());
       }
-      if (left instanceof z.ZodArray || right instanceof z.ZodArray) {
+      if (getSchemaTypeName(left) === 'ZodArray' || getSchemaTypeName(right) === 'ZodArray') {
         return z.array(z.any());
       }
-      if (left instanceof z.ZodObject || right instanceof z.ZodObject) {
+      if (getSchemaTypeName(left) === 'ZodObject' || getSchemaTypeName(right) === 'ZodObject') {
         return z.object({});
       }
 
       return left;
     }
 
-    if (zodType instanceof z.ZodDiscriminatedUnion) {
+    if (typeName === 'ZodDiscriminatedUnion') {
       const allTypes: z.ZodTypeAny[] = [];
       for (const options of def.options.values()) {
         options.forEach((opt: z.ZodTypeAny) =>
@@ -1265,22 +1346,22 @@ export class D1DatabaseManager {
         );
       }
 
-      const booleanType = allTypes.find(t => t instanceof z.ZodBoolean);
+      const booleanType = allTypes.find(t => getSchemaTypeName(t) === 'ZodBoolean');
       if (booleanType) return booleanType;
 
-      const numberType = allTypes.find(t => t instanceof z.ZodNumber);
+      const numberType = allTypes.find(t => getSchemaTypeName(t) === 'ZodNumber');
       if (numberType) return numberType;
 
-      const stringType = allTypes.find(t => t instanceof z.ZodString);
+      const stringType = allTypes.find(t => getSchemaTypeName(t) === 'ZodString');
       if (stringType) return stringType;
 
-      const recordType = allTypes.find(t => t instanceof z.ZodRecord);
+      const recordType = allTypes.find(t => getSchemaTypeName(t) === 'ZodRecord');
       if (recordType) return recordType;
 
-      const arrayType = allTypes.find(t => t instanceof z.ZodArray);
+      const arrayType = allTypes.find(t => getSchemaTypeName(t) === 'ZodArray');
       if (arrayType) return arrayType;
 
-      const objectType = allTypes.find(t => t instanceof z.ZodObject);
+      const objectType = allTypes.find(t => getSchemaTypeName(t) === 'ZodObject');
       if (objectType) return objectType;
 
       return allTypes[0] || z.string();
@@ -1299,7 +1380,7 @@ export class D1DatabaseManager {
     for (const index of options.indexes || []) {
       const indexSQL = `CREATE INDEX IF NOT EXISTS "idx_${tableName}_${index}" ON "${tableName}" ("${index}")`;
       try {
-        await this.db.exec(indexSQL);
+        await this.db.prepare(indexSQL).run();
       }
       catch (e) {
         console.error(`Error creating index for ${tableName}:`, e);
@@ -1311,7 +1392,7 @@ export class D1DatabaseManager {
     for (const uniqueIndex of options.uniqueIndexes || []) {
       const uniqueIndexSQL = `CREATE UNIQUE INDEX IF NOT EXISTS "uidx_${tableName}_${uniqueIndex}" ON "${tableName}" ("${uniqueIndex}")`;
       try {
-        await this.db.exec(uniqueIndexSQL);
+        await this.db.prepare(uniqueIndexSQL).run();
       }
       catch (e) {
         console.error(`Error creating unique index for ${tableName}:`, e);
@@ -1323,7 +1404,7 @@ export class D1DatabaseManager {
     if (options.userScoped && options.organizationScoped) {
       const compositeUniqueSQL = `CREATE UNIQUE INDEX IF NOT EXISTS "uidx_${tableName}_user_org" ON "${tableName}" ("user_id", "organization_id")`;
       try {
-        await this.db.exec(compositeUniqueSQL);
+        await this.db.prepare(compositeUniqueSQL).run();
       }
       catch (e) {
         console.error(`Error creating composite index for ${tableName}:`, e);
@@ -1394,7 +1475,7 @@ export class D1DatabaseManager {
   }
 
   async vacuum(): Promise<void> {
-    await this.db.exec('VACUUM');
+    await this.db.prepare('VACUUM').run();
   }
 
   async exportSchema(): Promise<string> {

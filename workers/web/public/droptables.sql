@@ -1,0 +1,16 @@
+drop table api_tokens;
+drop table connections;
+drop table order_discounts;
+drop table order_items;
+drop table orders;
+drop table payments;
+drop table pending_messages;
+drop table price_policies;
+drop table refunds;
+drop table service_usages;
+drop table services;
+drop table sessions;
+drop table subscriptions;
+drop table users;
+drop table versions;
+drop table vouchers;

@@ -570,6 +570,11 @@ export class UserDO extends DurableObject {
   }
 
   private async markRecordsAsFlushed(tableName: string, fromId: number, toId: number): Promise<number> {
+    console.log(`UPDATE ${tableName} 
+            SET queueStatus = 'flushed', flushedAt = ${Date.now()} 
+            WHERE queueStatus = 'pending' 
+            AND queueId > ${fromId}  
+            AND queueId <= ${toId}`);
     await this.database.execTransaction([{
       sql: `UPDATE ${tableName} 
             SET queueStatus = 'flushed', flushedAt = ? 

@@ -261,22 +261,19 @@ const processErrorQueue = async (batch: MessageBatch, env: Env): Promise<void> =
 
   for (const message of batch.messages) {
     try {
-      const errorData = message.body as any;
-
-      console.error('[QueueWorker] DLQ Entry:', {
-        timestamp: new Date(errorData.timestamp).toISOString(),
-        error: errorData.error,
-        userId: errorData.userId,
-        instanceId: errorData.instanceId,
-        table: errorData.table,
-        id: errorData.id,
-        sourceQueue: errorData.sourceQueue || 'unknown'
-      });
-
+      const parsed = parseMessage(message);
+      if (!parsed) {
+        console.error(`[QueueWorker] Failed to parse message: ${message.id}`);  
+        message.ack();
+        continue;
+      }
+      for (const parsedItem of parsed) {
+        console.error(`[QueueWorker] DLQ Entry: ${JSON.stringify(parsedItem)}`);  
+      }
       message.ack();
     } catch (error) {
-      console.error('[QueueWorker] Failed to process DLQ message:', error);
-      message.ack(); // Avoid loop
+      console.error(`[QueueWorker] Failed to process DLQ message with id (${message.id}): ${error}`);       
+      message.ack();
     }
   }
 };
