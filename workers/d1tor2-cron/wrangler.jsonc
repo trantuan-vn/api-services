@@ -1,0 +1,113 @@
+/**
+ * For more details on how to configure Wrangler, refer to:
+ * https://developers.cloudflare.com/workers/wrangler/configuration/
+ */
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "d1tor2-cron",
+	"main": "src/index.ts",
+	"compatibility_date": "2025-12-30",
+	"workers_dev": false,                // Tắt hoàn toàn subdomain *.workers.dev
+    "preview_urls": false,               // Tắt preview URL (không ai có thể truy cập qua preview)
+	"observability": {
+		"enabled": true
+	},
+	"triggers": {
+		"crons": [
+			"* * * * *"
+		]
+	},
+	"r2_buckets": [
+		{
+			"bucket_name": "lakehouse",
+			"binding": "lakehouse"
+		}
+	],
+	/**
+	 * Cloudflare Pipelines Configuration
+	 * 
+	 * Worker này tự động kiểm tra và tạo pipelines, streams, sinks trên Cloudflare.
+	 * Mỗi pipeline sẽ gửi data đến R2 Data Catalog dưới dạng Apache Iceberg tables.
+	 * 
+	 * Auto-setup pipelines (khuyến nghị):
+	 * 1. Set CLOUDFLARE_ACCOUNT_ID trong vars (hoặc secrets)
+	 * 2. Set CLOUDFLARE_API_TOKEN trong secrets (khuyến nghị dùng secrets cho token):
+	 *    npx wrangler secret put CLOUDFLARE_API_TOKEN
+	 *    - Tạo API token với quyền Pipelines Read & Write tại:
+	 *      Cloudflare Dashboard > My Profile > API Tokens
+	 * 
+	 * 3. Worker sẽ tự động kiểm tra và tạo pipeline, stream, sink cho mỗi schema
+	 *    nếu chưa tồn tại (chỉ tạo 1 lần)
+	 * 
+	 * Manual setup (nếu không dùng auto-setup):
+	 * 1. Enable R2 Data Catalog trên bucket "lakehouse":
+	 *    npx wrangler r2 bucket catalog enable lakehouse
+	 * 
+	 * 2. Tạo pipelines cho từng table (ví dụ cho price_policies):
+	 *    npx wrangler pipelines setup
+	 * 
+	 * 3. Sau khi tạo pipeline, lấy HTTP endpoint URL và thêm vào vars:
+	 *    Format: https://{stream-id}.ingest.cloudflare.com
+	 * 
+	 * Reference: https://developers.cloudflare.com/pipelines/getting-started/
+	 */
+	"vars": {
+		"CLOUDFLARE_ACCOUNT_ID": "e76b7bb989f93985402e1a61e6cd5ff3",  
+		// Cloudflare Account ID (để auto-create pipelines)
+		// Có thể tìm tại: Cloudflare Dashboard > Overview > Account ID
+		// "CLOUDFLARE_ACCOUNT_ID": "your-account-id",
+		
+		// Pipeline HTTP endpoints - chỉ cần set nếu không dùng auto-setup
+		// Format: PIPELINE_{SCHEMA_NAME}_ENDPOINT
+		// Ví dụ:
+		// "PIPELINE_PRICEPOLICYSCHEMA_ENDPOINT": "https://{stream-id}.ingest.cloudflare.com",
+		// "PIPELINE_SERVICESCHEMA_ENDPOINT": "https://{stream-id}.ingest.cloudflare.com",
+		// ... (thêm cho các pipeline khác)
+		
+		// Lưu ý: CLOUDFLARE_API_TOKEN nên được set qua secrets (không đặt trong vars):
+		// npx wrangler secret put CLOUDFLARE_API_TOKEN
+	},
+	"d1_databases": [
+		{
+			"binding": "D1DB",
+			"database_name": "unitoken_db",
+			"database_id": "02704177-c811-4132-92e4-622f955a7ae8"
+		}
+	],
+	"secrets_store_secrets": [
+		{
+		"binding": "CLOUDFLARE_API_TOKEN",
+		"store_id": "8fe9cf5e23574e849953a38dcdafdf8c",
+		"secret_name": "CLOUDFLARE_API_TOKEN"
+		}
+	]	
+	/**
+	 * Smart Placement
+	 * https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement
+	 */
+	// "placement": {  "mode": "smart" }
+	/**
+	 * Bindings
+	 * Bindings allow your Worker to interact with resources on the Cloudflare Developer Platform, including
+	 * databases, object storage, AI inference, real-time communication and more.
+	 * https://developers.cloudflare.com/workers/runtime-apis/bindings/
+	 */
+	/**
+	 * Environment Variables
+	 * https://developers.cloudflare.com/workers/wrangler/configuration/#environment-variables
+	 * Note: Use secrets to store sensitive data.
+	 * https://developers.cloudflare.com/workers/configuration/secrets/
+	 * 
+	 * Pipeline endpoints được định nghĩa ở trên trong section "vars"
+	 */
+	/**
+	 * Static Assets
+	 * https://developers.cloudflare.com/workers/static-assets/binding/
+	 */
+	// "assets": {  "directory": "./public/",  "binding": "ASSETS" }
+	/**
+	 * Service Bindings (communicate between multiple Workers)
+	 * https://developers.cloudflare.com/workers/wrangler/configuration/#service-bindings
+	 */
+	// "services": [  {   "binding": "MY_SERVICE",   "service": "my-service"  } ]
+}
