@@ -14,10 +14,18 @@
 	},
 	"triggers": {
 		"crons": [
-			"0 0 * * *"  // Chạy hàng ngày lúc 00:00 sáng
-			// Format: phút giờ ngày tháng thứ
+			"20 2 * * *"  // Chạy hàng ngày lúc 09:20 GMT+7 (02:20 UTC)
+			// Format: phút giờ ngày tháng thứ (sử dụng UTC time)
+			// 09:20 GMT+7 (Hà Nội) = 02:20 UTC
 			// Worker sẽ đẩy dữ liệu ngày xa nhất (trước cutoff = 96 ngày trước) từ D1 sang R2, sau đó xóa khỏi D1
 			// Đảm bảo D1 chỉ giữ lại 96 ngày dữ liệu gần nhất
+			// 
+			// Lưu ý: Cloudflare Workers cron sử dụng UTC time
+			// Để chạy vào giờ khác theo GMT+7, chuyển đổi: giờ_GMT+7 - 7 = giờ_UTC
+			// Ví dụ:
+			// - 00:00 GMT+7 = 17:00 UTC (ngày hôm trước) → "0 17 * * *"
+			// - 09:20 GMT+7 = 02:20 UTC → "20 2 * * *"
+			// - 12:00 GMT+7 = 05:00 UTC → "0 5 * * *"
 		]
 	},
 	"r2_buckets": [
