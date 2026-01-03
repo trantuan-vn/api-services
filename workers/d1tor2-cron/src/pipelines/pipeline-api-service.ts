@@ -193,7 +193,7 @@ export class CloudflarePipelineAPIService {
                         account_id: this.accountId,
                         bucket: bucketName,
                         namespace: namespace,
-                        table: tableName,                        
+                        table_name: tableName,                        
                     },
                     format: {
                         type: 'parquet',
