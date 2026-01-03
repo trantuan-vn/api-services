@@ -7,6 +7,18 @@
 
 import { PipelineManager } from './pipelines/pipeline-manager';
 
+// Cache pipeline manager instance to avoid recreating it on every request/cron trigger
+let pipelineManager: PipelineManager | null = null;
+
+const getPipelineManager = async (db: D1Database, env: Env): Promise<PipelineManager> => {
+	if (!pipelineManager) {
+		const accountId = (env as any).CLOUDFLARE_ACCOUNT_ID;
+		const apiToken = await (env as any).CLOUDFLARE_API_TOKEN.get();
+		pipelineManager = new PipelineManager(db, env, accountId, apiToken);
+	}
+	return pipelineManager;
+};
+
 export default {
 	async fetch(req, env, ctx) {
 		const url = new URL(req.url);
@@ -22,9 +34,7 @@ export default {
 		// Manual trigger endpoint (for testing)
 		if (pathname === '/trigger' && req.method === 'POST') {
 			try {
-				const accountId = (env as any).CLOUDFLARE_ACCOUNT_ID;
-				const apiToken = await (env as any).CLOUDFLARE_API_TOKEN.get();	
-				const pipelineManager = new PipelineManager(env.D1DB, env, accountId, apiToken);	
+				const pipelineManager = await getPipelineManager(env.D1DB, env);
 				const stats = await pipelineManager.runAllPipelines();
 				return new Response(JSON.stringify(stats, null, 2), {
 					headers: { 'Content-Type': 'application/json' },
@@ -42,13 +52,16 @@ export default {
 	},
 
 	// The scheduled handler is invoked at the interval set in wrangler.jsonc's triggers configuration
+	// Chạy hàng ngày để đẩy dữ liệu ngày xa nhất từ D1 sang R2, sau đó xóa khỏi D1
+	// Đảm bảo giữ lại 96 ngày gần nhất trong D1
 	async scheduled(event, env, ctx): Promise<void> {
-		console.log(`[${new Date().toISOString()}] Cron trigger fired: ${event.cron}`);
+		const now = new Date();
+		console.log(`[${now.toISOString()}] Cron trigger fired: ${event.cron}`);
+
+		console.log(`Executing pipeline for oldest available date in each table...`);
 
 		try {
-			const accountId = (env as any).CLOUDFLARE_ACCOUNT_ID;
-			const apiToken = await (env as any).CLOUDFLARE_API_TOKEN.get();	
-			const pipelineManager = new PipelineManager(env.D1DB, env, accountId, apiToken);
+			const pipelineManager = await getPipelineManager(env.D1DB, env);
 			const stats = await pipelineManager.runAllPipelines();
 
 			console.log(`Pipeline execution completed:`);

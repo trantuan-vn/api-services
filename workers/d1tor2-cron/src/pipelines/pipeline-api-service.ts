@@ -142,8 +142,11 @@ export class CloudflarePipelineAPIService {
                 headers: this.headers,
                 body: JSON.stringify({
                     name: streamName,
+                    format: {
+                        type: 'parquet',
+                        compression: 'zstd',
+                    },
                     schema: schema,
-                    http: { enabled: true },
                 }),
             });
 
@@ -184,15 +187,18 @@ export class CloudflarePipelineAPIService {
                 headers: this.headers,
                 body: JSON.stringify({
                     name: sinkName,
-                    type: 'r2',
+                    type: 'r2_data_catalog',
                     config: {
+                        token: this.apiToken,
+                        account_id: this.accountId,
                         bucket: bucketName,
                         namespace: namespace,
-                        table: tableName,
-                        compression: 'zstd',
-                        roll_size_mb: 100,
-                        roll_time_seconds: 10,
+                        table: tableName,                        
                     },
+                    format: {
+                        type: 'parquet',
+                        compression: 'zstd',
+                    }
                 }),
             });
 
@@ -214,7 +220,6 @@ export class CloudflarePipelineAPIService {
         pipelineName: string, 
         streamName: string, 
         sinkName: string, 
-        tableName: string
     ): Promise<string> {
         const endpoint = `/accounts/${this.accountId}/pipelines/v1/pipelines`;
         const sqlTransformation = `INSERT INTO ${sinkName} SELECT * FROM ${streamName};`;
@@ -225,9 +230,7 @@ export class CloudflarePipelineAPIService {
                 headers: this.headers,
                 body: JSON.stringify({
                     name: pipelineName,
-                    sql: sqlTransformation,
-                    stream: { name: streamName },
-                    sink: { name: sinkName },
+                    sql: sqlTransformation
                 }),
             });
 
@@ -317,7 +320,7 @@ export class CloudflarePipelineAPIService {
         // 3. Đảm bảo pipeline tồn tại (chỉ tạo nếu chưa tồn tại)
         if (!pipelineExists) {
             console.log(`Creating pipeline: ${pipelineName}`);
-            await this.createPipeline(pipelineName, streamName, sinkName, config.tableName);
+            await this.createPipeline(pipelineName, streamName, sinkName);
         }
 
         // 4. Lấy endpoint cuối cùng

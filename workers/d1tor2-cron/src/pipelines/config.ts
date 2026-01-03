@@ -51,6 +51,18 @@ const isZodDate = (schema: any): boolean => {
 	return getSchemaTypeName(schema) === 'ZodDate';
 };
 
+const isZodEffects = (schema: any): boolean => {
+	return getSchemaTypeName(schema) === 'ZodEffects';
+};
+
+const isZodNullable = (schema: any): boolean => {
+	return getSchemaTypeName(schema) === 'ZodNullable';
+};
+
+const isZodArray = (schema: any): boolean => {
+	return getSchemaTypeName(schema) === 'ZodArray';
+};
+
 /**
  * Pipeline field definition theo format Cloudflare Pipelines
  * https://developers.cloudflare.com/pipelines/getting-started/
@@ -83,6 +95,197 @@ export interface PipelineConfig {
 }
 
 /**
+ * Unwrap Zod type để lấy inner type từ các wrapper types (Optional, Nullable, Default, Effects, etc.)
+ * Logic tương tự như trong queue-worker/src/database/index.ts
+ */
+function unwrapZodType(zodType: z.ZodTypeAny): z.ZodTypeAny {
+	const typeName = getSchemaTypeName(zodType);
+	const def = (zodType as any)._def;
+
+	if (typeName === 'ZodEffects') {
+		if (def.schema) {
+			return unwrapZodType(def.schema);
+		}
+		if (def.innerType) {
+			return unwrapZodType(def.innerType);
+		}
+	}
+
+	if (typeName === 'ZodOptional' ||
+		typeName === 'ZodNullable' ||
+		typeName === 'ZodDefault' ||
+		typeName === 'ZodBranded' ||
+		typeName === 'ZodReadonly' ||
+		typeName === 'ZodCatch' ||
+		typeName === 'ZodPromise') {
+
+		if (def.innerType) {
+			return unwrapZodType(def.innerType);
+		}
+		if (def.valueType) {
+			return unwrapZodType(def.valueType);
+		}
+		if (def.type) {
+			return unwrapZodType(def.type);
+		}
+	}
+
+	if (typeName === 'ZodLazy' && def.getter) {
+		try {
+			return unwrapZodType(def.getter());
+		} catch {
+			return z.string();
+		}
+	}
+
+	if (typeName === 'ZodPipeline' && def.in) {
+		return unwrapZodType(def.in);
+	}
+
+	if (typeName === 'ZodUnion') {
+		const options = def.options as z.ZodTypeAny[];
+		const unwrappedTypes = options.map(opt => unwrapZodType(opt));
+
+		const booleanType = unwrappedTypes.find(t => getSchemaTypeName(t) === 'ZodBoolean');
+		if (booleanType) return booleanType;
+
+		const numberType = unwrappedTypes.find(t => getSchemaTypeName(t) === 'ZodNumber');
+		if (numberType) return numberType;
+
+		const stringType = unwrappedTypes.find(t => getSchemaTypeName(t) === 'ZodString');
+		if (stringType) return stringType;
+
+		const recordType = unwrappedTypes.find(t => getSchemaTypeName(t) === 'ZodRecord');
+		if (recordType) return recordType;
+
+		const arrayType = unwrappedTypes.find(t => getSchemaTypeName(t) === 'ZodArray');
+		if (arrayType) return arrayType;
+
+		const objectType = unwrappedTypes.find(t => getSchemaTypeName(t) === 'ZodObject');
+		if (objectType) return objectType;
+
+		return unwrappedTypes[0] || z.string();
+	}
+
+	if (typeName === 'ZodIntersection') {
+		const left = unwrapZodType(def.left);
+		const right = unwrapZodType(def.right);
+
+		if (getSchemaTypeName(left) === 'ZodBoolean' || getSchemaTypeName(right) === 'ZodBoolean') {
+			return z.boolean();
+		}
+		if (getSchemaTypeName(left) === 'ZodNumber' || getSchemaTypeName(right) === 'ZodNumber') {
+			return z.number();
+		}
+		if (getSchemaTypeName(left) === 'ZodString' || getSchemaTypeName(right) === 'ZodString') {
+			return z.string();
+		}
+		if (getSchemaTypeName(left) === 'ZodRecord' || getSchemaTypeName(right) === 'ZodRecord') {
+			return z.record(z.string(), z.any());
+		}
+		if (getSchemaTypeName(left) === 'ZodArray' || getSchemaTypeName(right) === 'ZodArray') {
+			return z.array(z.any());
+		}
+		if (getSchemaTypeName(left) === 'ZodObject' || getSchemaTypeName(right) === 'ZodObject') {
+			return z.object({});
+		}
+
+		return left;
+	}
+
+	if (typeName === 'ZodDiscriminatedUnion') {
+		const allTypes: z.ZodTypeAny[] = [];
+		for (const options of def.options.values()) {
+			options.forEach((opt: z.ZodTypeAny) =>
+				allTypes.push(unwrapZodType(opt))
+			);
+		}
+
+		const booleanType = allTypes.find(t => getSchemaTypeName(t) === 'ZodBoolean');
+		if (booleanType) return booleanType;
+
+		const numberType = allTypes.find(t => getSchemaTypeName(t) === 'ZodNumber');
+		if (numberType) return numberType;
+
+		const stringType = allTypes.find(t => getSchemaTypeName(t) === 'ZodString');
+		if (stringType) return stringType;
+
+		const recordType = allTypes.find(t => getSchemaTypeName(t) === 'ZodRecord');
+		if (recordType) return recordType;
+
+		const arrayType = allTypes.find(t => getSchemaTypeName(t) === 'ZodArray');
+		if (arrayType) return arrayType;
+
+		const objectType = allTypes.find(t => getSchemaTypeName(t) === 'ZodObject');
+		if (objectType) return objectType;
+
+		return allTypes[0] || z.string();
+	}
+
+	return zodType;
+}
+
+/**
+ * Kiểm tra xem ZodNumber có phải là integer type không
+ */
+function isIntegerType(zodNumber: z.ZodNumber): boolean {
+	const checks = (zodNumber as any)._def.checks || [];
+	return checks.some((check: any) => check.kind === 'int');
+}
+
+/**
+ * Map Zod type sang Cloudflare Pipelines type
+ * Logic tương tự getColumnType trong queue-worker nhưng map sang Pipeline format
+ */
+function getPipelineType(zodType: z.ZodTypeAny, fieldName?: string): PipelineField['type'] {
+	const unwrappedType = unwrapZodType(zodType);
+	const typeName = getSchemaTypeName(unwrappedType);
+
+	// Map to Cloudflare Pipelines types
+	if (typeName === 'ZodString') {
+		return 'string';
+	} else if (typeName === 'ZodNumber') {
+		return isIntegerType(unwrappedType as z.ZodNumber) ? 'int64' : 'float64';
+	} else if (typeName === 'ZodBoolean') {
+		return 'bool';
+	} else if (typeName === 'ZodDate') {
+		return 'timestamp';
+	} else if (typeName === 'ZodBigInt') {
+		return 'int64';
+	} else if (typeName === 'ZodEnum') {
+		return 'string';
+	} else if (typeName === 'ZodNativeEnum') {
+		return 'string';
+	} else if (typeName === 'ZodLiteral') {
+		const value = (unwrappedType as any)._def.value;
+		if (typeof value === 'boolean') {
+			return 'bool';
+		} else if (typeof value === 'number') {
+			return Number.isInteger(value) ? 'int64' : 'float64';
+		} else {
+			return 'string';
+		}
+	} else if (typeName === 'ZodRecord' ||
+		typeName === 'ZodMap' ||
+		typeName === 'ZodArray' ||
+		typeName === 'ZodTuple' ||
+		typeName === 'ZodObject') {
+		// Complex types được lưu dưới dạng JSON string
+		return 'string';
+	} else if (fieldName && (
+		fieldName.toLowerCase().includes('time') ||
+		fieldName.toLowerCase().includes('at') ||
+		fieldName.toLowerCase().endsWith('_at')
+	)) {
+		// Heuristic cho timestamp fields
+		return 'timestamp';
+	} else {
+		// Default fallback
+		return 'string';
+	}
+}
+
+/**
  * Helper function để tạo pipeline schema từ Zod schema
  * Chuyển đổi các field types từ Zod sang Cloudflare Pipelines format
  */
@@ -97,37 +300,23 @@ function createPipelineSchemaFromZod(zodSchema: z.ZodSchema): PipelineSchema {
 	const fields: PipelineField[] = [];
 
 	for (const [key, value] of Object.entries(shape)) {
-		let type: PipelineField['type'] = 'string';
 		let required = true;
 		let zodType: z.ZodTypeAny = value as z.ZodTypeAny;
 
-		// Handle optional và default
+		// Handle optional, nullable, và default
 		if (isZodOptional(zodType)) {
 			required = false;
 			zodType = (zodType as any)._def.innerType;
 		} else if (isZodDefault(zodType)) {
 			required = false;
 			zodType = (zodType as any)._def.innerType;
+		} else if (isZodNullable(zodType)) {
+			required = false;
+			zodType = (zodType as any)._def.innerType;
 		}
 
-		// Map Zod types to Pipeline types
-		if (isZodString(zodType)) {
-			type = 'string';
-		} else if (isZodNumber(zodType)) {
-			// Heuristic: nếu field name chứa 'id' hoặc 'count', dùng int64
-			if (key.toLowerCase().includes('id') || key.toLowerCase().includes('count')) {
-				type = 'int64';
-			} else {
-				type = 'float64';
-			}
-		} else if (isZodBoolean(zodType)) {
-			type = 'bool';
-		} else if (isZodDate(zodType)) {
-			type = 'timestamp';
-		} else if (key.toLowerCase().includes('time') || key.toLowerCase().includes('at') || key.toLowerCase().endsWith('_at')) {
-			// Heuristic cho timestamp fields
-			type = 'timestamp';
-		}
+		// Sử dụng getPipelineType để map type (tương tự getColumnType trong queue-worker)
+		const type = getPipelineType(zodType, key);
 
 		fields.push({ name: key, type, required });
 	}

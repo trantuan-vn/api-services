@@ -14,7 +14,10 @@
 	},
 	"triggers": {
 		"crons": [
-			"* * * * *"
+			"0 0 * * *"  // Chạy hàng ngày lúc 00:00 sáng
+			// Format: phút giờ ngày tháng thứ
+			// Worker sẽ đẩy dữ liệu ngày xa nhất (trước cutoff = 96 ngày trước) từ D1 sang R2, sau đó xóa khỏi D1
+			// Đảm bảo D1 chỉ giữ lại 96 ngày dữ liệu gần nhất
 		]
 	},
 	"r2_buckets": [
@@ -52,20 +55,19 @@
 	 * Reference: https://developers.cloudflare.com/pipelines/getting-started/
 	 */
 	"vars": {
-		"CLOUDFLARE_ACCOUNT_ID": "e76b7bb989f93985402e1a61e6cd5ff3",  
 		// Cloudflare Account ID (để auto-create pipelines)
 		// Có thể tìm tại: Cloudflare Dashboard > Overview > Account ID
 		// "CLOUDFLARE_ACCOUNT_ID": "your-account-id",
-		
-		// Pipeline HTTP endpoints - chỉ cần set nếu không dùng auto-setup
-		// Format: PIPELINE_{SCHEMA_NAME}_ENDPOINT
-		// Ví dụ:
-		// "PIPELINE_PRICEPOLICYSCHEMA_ENDPOINT": "https://{stream-id}.ingest.cloudflare.com",
-		// "PIPELINE_SERVICESCHEMA_ENDPOINT": "https://{stream-id}.ingest.cloudflare.com",
-		// ... (thêm cho các pipeline khác)
-		
-		// Lưu ý: CLOUDFLARE_API_TOKEN nên được set qua secrets (không đặt trong vars):
-		// npx wrangler secret put CLOUDFLARE_API_TOKEN
+		"CLOUDFLARE_ACCOUNT_ID": "e76b7bb989f93985402e1a61e6cd5ff3",  		
+		// Concurrency limits (tùy chọn - sẽ dùng giá trị mặc định nếu không set)
+		// Lưu ý về Cloudflare Workers limits:
+		// - 50 concurrent subrequests per worker
+		// - ~128MB memory default
+		// - Mỗi pipeline tạo ~3-5 subrequests (D1 queries + HTTP requests)
+		// - Mỗi batch tạo ~2-3 subrequests (D1 query + HTTP send + D1 delete)
+		// Nên điều chỉnh concurrency limits dựa trên số lượng pipelines/batches và tài nguyên worker
+		"PIPELINE_CONCURRENCY_LIMIT": "5",  // Số lượng pipelines chạy song song (default: 5, max: 20)
+		"BATCH_CONCURRENCY_LIMIT": "3",     // Số lượng batches xử lý song song trong mỗi pipeline (default: 3, max: 20)		
 	},
 	"d1_databases": [
 		{
